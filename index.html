@@ -54,6 +54,7 @@
       box-shadow: 0 0 0 3px rgba(88,166,255,.16);
     }
     .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .row-current { display:grid; grid-template-columns: 2fr 1fr; gap:8px; }
     table { width:100%; border-collapse:collapse; }
     th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:8px 6px; }
     th { color:var(--muted); text-align:left; }
@@ -94,7 +95,7 @@
   <div class="wrap">
     <h1>レベル到達時間計算</h1>
     <div class="sub">
-      ②と③はM表記（百万単位）で入力します。内部で×1,000,000して計算します。<br>
+      ②はM表記（百万単位）で入力します。③は「単位なし / k / M」から選べます。<br>
       レベルリストはGoogleスプレッドシートから取得します。
     </div>
 
@@ -110,8 +111,16 @@
           <input id="targetXpM" type="number" min="0" placeholder="例：24">
         </div>
         <div>
-          <label>③ 現在の経験値（M）</label>
-          <input id="currentXpM" type="number" min="0" placeholder="例：14">
+          <label>③ 現在の経験値</label>
+          <div class="row-current">
+            <input id="currentXpVal" type="number" min="0" placeholder="例：14">
+            <select id="currentXpUnit">
+              <option value="raw">単位なし</option>
+              <option value="k">k（千）</option>
+              <option value="M" selected>M（百万）</option>
+            </select>
+          </div>
+          <div class="small" style="margin-top:4px">例：500k → 値=500 / 単位=k, 12M → 値=12 / 単位=M</div>
         </div>
       </div>
 
@@ -160,7 +169,7 @@
       </div>
     </section>
 
-    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.4 – レベル選択で②に反映版</div>
+    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.5 – ③単位切替版</div>
   </div>
 
   <script>
@@ -200,8 +209,8 @@
     }
 
     function calcTime(perHour, targetM, currentM) {
-      const target = (Number(targetM) || 0) * M;
-      const current = (Number(currentM) || 0) * M;
+      const target = (Number(targetM) || 0) * M;   // ②(M) → 実数
+      const current = (Number(currentM) || 0) * M; // ③(M換算) → 実数
       const remain = Math.max(0, target - current);
       let hours;
       if (remain === 0) {
@@ -224,6 +233,15 @@
       const s = String(v).replace(',', '.');
       const n = Number(s);
       return Number.isNaN(n) ? 0 : n;
+    }
+
+    // ③の単位をMに直す
+    function currentToM(val, unit) {
+      const num = Number(val) || 0;
+      if (unit === 'M') return num;
+      if (unit === 'k') return num * 1000 / 1_000_000; // 1000 → 0.001M
+      // raw（単位なし）は1 / 1,000,000でMにする
+      return num / 1_000_000;
     }
 
     async function fetchLevelsFromSheet() {
@@ -281,7 +299,9 @@
       clearWarning();
       const perHour = $('#perHourXp').value === '' ? 0 : Number($('#perHourXp').value);
       const targetM = $('#targetXpM').value === '' ? 0 : Number($('#targetXpM').value);
-      const currentM = $('#currentXpM').value === '' ? 0 : Number($('#currentXpM').value);
+      const currentVal = $('#currentXpVal').value === '' ? 0 : Number($('#currentXpVal').value);
+      const currentUnit = $('#currentXpUnit').value;
+      const currentM = currentToM(currentVal, currentUnit);   // ここでM換算する
       const selLevelVal = $('#levelSelect').value ? Number($('#levelSelect').value) : null;
 
       const res = calcTime(perHour, targetM, currentM);
@@ -311,7 +331,8 @@
       const state = {
         perHourXp: $('#perHourXp').value === '' ? undefined : Number($('#perHourXp').value),
         targetXpM: $('#targetXpM').value === '' ? undefined : Number($('#targetXpM').value),
-        currentXpM: $('#currentXpM').value === '' ? undefined : Number($('#currentXpM').value),
+        currentXpVal: $('#currentXpVal').value === '' ? undefined : Number($('#currentXpVal').value),
+        currentXpUnit: $('#currentXpUnit').value || 'M',
         selectedLevel: $('#levelSelect').value || ''
       };
       const json = JSON.stringify(state);
@@ -345,22 +366,24 @@
       if (st) {
         if (typeof st.perHourXp === 'number') $('#perHourXp').value = st.perHourXp;
         if (typeof st.targetXpM === 'number') $('#targetXpM').value = st.targetXpM;
-        if (typeof st.currentXpM === 'number') $('#currentXpM').value = st.currentXpM;
+        if (typeof st.currentXpVal === 'number') $('#currentXpVal').value = st.currentXpVal;
+        if (st.currentXpUnit) $('#currentXpUnit').value = st.currentXpUnit;
         if (st.selectedLevel) $('#levelSelect').value = st.selectedLevel;
       }
 
-      // 入力のイベント
-      ['#perHourXp','#targetXpM','#currentXpM'].forEach(sel => {
+      // 入力イベント
+      ['#perHourXp','#targetXpM','#currentXpVal','#currentXpUnit'].forEach(sel => {
         $(sel).addEventListener('input', () => compute(levels));
+        $(sel).addEventListener('change', () => compute(levels));
       });
 
-      // ★ここが今回のポイント：レベルを選んだら②に反映してから計算する
+      // レベル選択で②に反映
       $('#levelSelect').addEventListener('change', () => {
         const val = $('#levelSelect').value;
         if (val) {
           const lv = levels.find(l => String(l.level) === String(val));
           if (lv) {
-            $('#targetXpM').value = lv.xpM; // ← これで②が更新される
+            $('#targetXpM').value = lv.xpM;
           }
         }
         compute(levels);
@@ -389,7 +412,7 @@
         }
       });
 
-      // 初回表示
+      // 初回計算
       compute(levels);
     }
 

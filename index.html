@@ -18,7 +18,7 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 24px;
+      padding: 16px;
       background: linear-gradient(180deg, #0b0f14 0%, #0d131b 100%);
       color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto,
@@ -26,40 +26,70 @@
         "Yu Gothic UI", Meiryo, sans-serif;
       line-height: 1.6;
     }
-    h1 { font-size: 1.6rem; margin: 0 0 12px; }
-    .sub { color: var(--muted); margin-bottom: 16px; }
-    .wrap { max-width: 820px; margin: 0 auto; }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0));
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: var(--radius);
-      padding: 18px;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 6px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
-      margin-bottom: 16px;
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
     }
-    label { display:block; font-size:.9rem; color:var(--muted); margin-bottom:4px; }
-    input[type="number"], select {
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 8px;
+    }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 14px;
+      font-size: .88rem;
+    }
+    .card {
+      background: rgba(13,19,27,.6);
+      border: 1px solid rgba(255,255,255,.05);
+      border-radius: var(--radius);
+      padding: 14px;
+      backdrop-filter: blur(4px);
+      margin-bottom: 14px;
+    }
+    h2 {
+      font-size: 1rem;
+      margin: 0 0 10px;
+    }
+    label {
+      display: block;
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input[type="number"], select, input[type="text"] {
       width: 100%;
       background: #0e141b;
       color: var(--text);
       border: 1px solid rgba(255,255,255,.08);
       border-radius: 10px;
       padding: 9px 11px;
-      font-size: 1rem;
+      font-size: .9rem;
       outline: none;
     }
     input:focus, select:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(88,166,255,.16);
     }
-    .row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-    .row-current { display:grid; grid-template-columns: 2fr 1fr; gap:8px; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:8px 6px; }
-    th { color:var(--muted); text-align:left; }
-    .hidden { display:none !important; }
-    .small { font-size:.8rem; color:var(--muted); }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .row-current {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .small {
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid rgba(255,255,255,.08); padding: 8px 6px; }
+    th { color: var(--muted); text-align: left; font-size: .78rem; }
+    .hidden { display: none !important; }
     .btn {
       appearance: none;
       border: 1px solid rgba(255,255,255,.12);
@@ -69,16 +99,14 @@
       border-radius: 10px;
       cursor: pointer;
       font-weight: 600;
+      font-size: .85rem;
     }
     .btn:hover { background:#182231; }
     .share-grid {
-      display:grid;
+      display: grid;
       grid-template-columns: auto auto 1fr;
       gap: 10px;
       align-items: center;
-    }
-    input[readonly] {
-      background: #0b1015;
     }
     .error {
       background: rgba(239,68,68,.12);
@@ -86,8 +114,34 @@
       color: #fecaca;
       padding: 6px 10px;
       border-radius: 8px;
-      font-size: .8rem;
+      font-size: .75rem;
       margin-top: 8px;
+    }
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    /* スマホ対応 */
+    @media (max-width: 720px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+      .row-current {
+        grid-template-columns: 1fr 1fr;
+      }
+      .share-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .share-grid input[type="text"] {
+        grid-column: 1 / -1;
+      }
+      body {
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.35rem;
+      }
     }
   </style>
 </head>
@@ -95,8 +149,8 @@
   <div class="wrap">
     <h1>レベル到達時間計算</h1>
     <div class="sub">
-      ②はM表記（百万単位）で入力します。③は「単位なし / k / M」から選べます。<br>
-      レベルリストはGoogleスプレッドシートから取得します。
+      ②はM（百万）で入力してください。③は「単位なし・k・M」から選べます。<br>
+      レベル表はGoogleスプレッドシートから読み込みます。
     </div>
 
     <section class="card">
@@ -135,27 +189,29 @@
 
     <section class="card">
       <h2>結果</h2>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:40%">対象</th>
-            <th style="width:30%">所要時間</th>
-            <th style="width:30%">到達時刻（東京）</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td id="rowSelLabel">手動入力</td>
-            <td id="rowSelTime">—</td>
-            <td id="rowSelEta">—</td>
-          </tr>
-          <tr id="rowNextLevel" class="hidden">
-            <td id="rowNextLabel">次レベル</td>
-            <td id="rowNextTime">—</td>
-            <td id="rowNextEta">—</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40%">対象</th>
+              <th style="width:30%">所要時間</th>
+              <th style="width:30%">到達時刻（東京）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="rowSelLabel">手動入力</td>
+              <td id="rowSelTime">—</td>
+              <td id="rowSelEta">—</td>
+            </tr>
+            <tr id="rowNextLevel" class="hidden">
+              <td id="rowNextLabel">次レベル</td>
+              <td id="rowNextTime">—</td>
+              <td id="rowNextEta">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <div id="calcError" class="error hidden"></div>
     </section>
 
@@ -169,7 +225,7 @@
       </div>
     </section>
 
-    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.5 – ③単位切替版</div>
+    <div class="small" style="margin-top:8px; color:var(--muted);">v1.3.6 – スマホ対応レイアウト</div>
   </div>
 
   <script>
@@ -209,8 +265,8 @@
     }
 
     function calcTime(perHour, targetM, currentM) {
-      const target = (Number(targetM) || 0) * M;   // ②(M) → 実数
-      const current = (Number(currentM) || 0) * M; // ③(M換算) → 実数
+      const target = (Number(targetM) || 0) * M;
+      const current = (Number(currentM) || 0) * M;
       const remain = Math.max(0, target - current);
       let hours;
       if (remain === 0) {
@@ -235,12 +291,11 @@
       return Number.isNaN(n) ? 0 : n;
     }
 
-    // ③の単位をMに直す
+    // ③の単位をMにそろえる
     function currentToM(val, unit) {
       const num = Number(val) || 0;
       if (unit === 'M') return num;
-      if (unit === 'k') return num * 1000 / 1_000_000; // 1000 → 0.001M
-      // raw（単位なし）は1 / 1,000,000でMにする
+      if (unit === 'k') return num * 1000 / 1_000_000;
       return num / 1_000_000;
     }
 
@@ -301,7 +356,7 @@
       const targetM = $('#targetXpM').value === '' ? 0 : Number($('#targetXpM').value);
       const currentVal = $('#currentXpVal').value === '' ? 0 : Number($('#currentXpVal').value);
       const currentUnit = $('#currentXpUnit').value;
-      const currentM = currentToM(currentVal, currentUnit);   // ここでM換算する
+      const currentM = currentToM(currentVal, currentUnit);
       const selLevelVal = $('#levelSelect').value ? Number($('#levelSelect').value) : null;
 
       const res = calcTime(perHour, targetM, currentM);
@@ -371,13 +426,11 @@
         if (st.selectedLevel) $('#levelSelect').value = st.selectedLevel;
       }
 
-      // 入力イベント
       ['#perHourXp','#targetXpM','#currentXpVal','#currentXpUnit'].forEach(sel => {
         $(sel).addEventListener('input', () => compute(levels));
         $(sel).addEventListener('change', () => compute(levels));
       });
 
-      // レベル選択で②に反映
       $('#levelSelect').addEventListener('change', () => {
         const val = $('#levelSelect').value;
         if (val) {
@@ -389,7 +442,6 @@
         compute(levels);
       });
 
-      // 共有
       $('#genLink').addEventListener('click', () => {
         const hash = encodeStateToHash();
         const url = location.origin + location.pathname + hash;
@@ -412,7 +464,6 @@
         }
       });
 
-      // 初回計算
       compute(levels);
     }
 

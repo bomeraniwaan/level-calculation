@@ -8,31 +8,39 @@
   <style>
     :root {
       --bg: #0b0f14;
-      --card: #121821;
+      --card: rgba(13,19,27,.68);
       --muted: #7c8aa0;
       --text: #e6edf3;
       --accent: #58a6ff;
-      --danger: #ef4444;
-      --radius: 14px;
+      --radius: 16px;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       padding: 16px;
-      background: linear-gradient(180deg, #0b0f14 0%, #0d131b 100%);
+      background: radial-gradient(circle at top, #132036 0%, #080b10 55%, #04070b 100%);
       color: var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto,
         "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP",
         "Yu Gothic UI", Meiryo, sans-serif;
       line-height: 1.6;
+      min-height: 100vh;
     }
     .wrap {
       max-width: 860px;
       margin: 0 auto;
+      position: relative;
+      z-index: 2;
     }
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       margin: 0 0 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    h1 img {
+      height: 46px;
     }
     .sub {
       color: var(--muted);
@@ -40,16 +48,23 @@
       font-size: .88rem;
     }
     .card {
-      background: rgba(13,19,27,.6);
-      border: 1px solid rgba(255,255,255,.05);
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.08);
       border-radius: var(--radius);
       padding: 14px;
       backdrop-filter: blur(4px);
       margin-bottom: 14px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.25);
     }
     h2 {
       font-size: 1rem;
       margin: 0 0 10px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    h2 img.icon-inline {
+      height: 26px;
     }
     label {
       display: block;
@@ -86,6 +101,10 @@
       font-size: .75rem;
       color: var(--muted);
     }
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid rgba(255,255,255,.08); padding: 8px 6px; }
     th { color: var(--muted); text-align: left; font-size: .78rem; }
@@ -108,6 +127,7 @@
       gap: 10px;
       align-items: center;
     }
+    input[readonly] { background: #0b1015; }
     .error {
       background: rgba(239,68,68,.12);
       border: 1px solid rgba(239,68,68,.45);
@@ -117,44 +137,78 @@
       font-size: .75rem;
       margin-top: 8px;
     }
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
+
+    /* mascots -------------------------------------------------- */
+    .deco {
+      position: fixed;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .deco.slime-top {
+      top: 10px;
+      right: 12px;
+      width: 110px;
+      transform: rotate(4deg);
+    }
+    .deco.girl-left {
+      bottom: 6px;
+      left: 8px;
+      width: 140px;
+    }
+    .deco.panda-right {
+      bottom: 10px;
+      right: 8px;
+      width: 110px;
+    }
+    .deco.cabbage {
+      top: 45%;
+      left: -34px;
+      width: 160px;
+      transform: rotate(-6deg);
     }
 
-    /* スマホ対応 */
+    /* スマホ */
     @media (max-width: 720px) {
-      .row {
-        grid-template-columns: 1fr;
+      body { padding: 12px; }
+      .row { grid-template-columns: 1fr; }
+      .row-current { grid-template-columns: 1fr 1fr; }
+      .share-grid { grid-template-columns: 1fr 1fr; }
+      .share-grid input[type="text"] { grid-column: 1 / -1; }
+      h1 { gap: 4px; }
+      .deco.cabbage,
+      .deco.panda-right {
+        display: none;
       }
-      .row-current {
-        grid-template-columns: 1fr 1fr;
+      .deco.slime-top {
+        width: 80px;
+        right: -6px;
+        top: -4px;
       }
-      .share-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-      .share-grid input[type="text"] {
-        grid-column: 1 / -1;
-      }
-      body {
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.35rem;
+      .deco.girl-left {
+        width: 104px;
+        bottom: -10px;
       }
     }
   </style>
 </head>
 <body>
+  <!-- 飾り画像。ファイルを用意して src を合わせてください -->
+  <img src="img/slime_crystal.png" alt="" class="deco slime-top">
+  <img src="img/girl_gift.png" alt="" class="deco girl-left">
+  <img src="img/panda_scroll.png" alt="" class="deco panda-right">
+  <img src="img/cabbage_dog.png" alt="" class="deco cabbage">
+
   <div class="wrap">
-    <h1>レベル到達時間計算</h1>
+    <h1>
+      <img src="img/slime_sleepy.png" alt="">
+      レベル到達時間計算
+    </h1>
     <div class="sub">
-      ②はM（百万）で入力してください。③は「単位なし・k・M」から選べます。<br>
-      レベル表はGoogleスプレッドシートから読み込みます。
+      ②はM（百万）で入力します。③は「単位なし・k・M」から選択できます。レベルはシートから自動取得します。
     </div>
 
     <section class="card">
-      <h2>入力</h2>
+      <h2><img src="img/slime_crystal.png" class="icon-inline" alt="">入力</h2>
       <div class="row">
         <div>
           <label>① 1時間に溜まる経験値（/h）<span class="small">（Mではありません）</span></label>
@@ -171,10 +225,10 @@
             <select id="currentXpUnit">
               <option value="raw">単位なし</option>
               <option value="k">k（千）</option>
-              <option value="M" selected>M（百万）</option>
+              <option value="M" selected>M</option>
             </select>
           </div>
-          <div class="small" style="margin-top:4px">例：500k → 値=500 / 単位=k, 12M → 値=12 / 単位=M</div>
+          <div class="small" style="margin-top:4px">例：500 / k → 500,000 / M換算0.5</div>
         </div>
       </div>
 
@@ -188,7 +242,7 @@
     </section>
 
     <section class="card">
-      <h2>結果</h2>
+      <h2><img src="img/panda_scroll.png" class="icon-inline" alt="">結果</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -216,16 +270,16 @@
     </section>
 
     <section class="card">
-      <h2>共有</h2>
+      <h2><img src="img/girl_gift.png" class="icon-inline" alt="">共有</h2>
       <p class="small">入力値だけをURLに埋め込んで共有します（レベル表はシートから毎回取得）。</p>
       <div class="share-grid">
         <button id="genLink" type="button" class="btn">共有リンクを生成</button>
         <button id="copyLink" type="button" class="btn">コピー</button>
-        <input id="shareUrl" type="text" readonly placeholder="共有リンクがここに表示されます">
+        <input id="shareUrl" type="text" readonly placeholder="ここに共有リンクが表示されます">
       </div>
     </section>
 
-    <div class="small" style="margin-top:8px; color:var(--muted);">v1.3.6 – スマホ対応レイアウト</div>
+    <div class="small" style="margin-top:6px; color:var(--muted);">v1.3.6-mascot</div>
   </div>
 
   <script>
@@ -265,8 +319,8 @@
     }
 
     function calcTime(perHour, targetM, currentM) {
-      const target = (Number(targetM) || 0) * M;
-      const current = (Number(currentM) || 0) * M;
+      const target = (targetM || 0) * M;
+      const current = (currentM || 0) * M;
       const remain = Math.max(0, target - current);
       let hours;
       if (remain === 0) {
@@ -291,7 +345,6 @@
       return Number.isNaN(n) ? 0 : n;
     }
 
-    // ③の単位をMにそろえる
     function currentToM(val, unit) {
       const num = Number(val) || 0;
       if (unit === 'M') return num;
@@ -341,14 +394,7 @@
       }
     }
 
-    function warning(msg) {
-      const el = $('#calcError');
-      el.textContent = msg;
-      el.classList.remove('hidden');
-    }
-    function clearWarning() {
-      $('#calcError').classList.add('hidden');
-    }
+    function clearWarning() { $('#calcError').classList.add('hidden'); }
 
     function compute(levels) {
       clearWarning();
@@ -435,9 +481,7 @@
         const val = $('#levelSelect').value;
         if (val) {
           const lv = levels.find(l => String(l.level) === String(val));
-          if (lv) {
-            $('#targetXpM').value = lv.xpM;
-          }
+          if (lv) $('#targetXpM').value = lv.xpM;
         }
         compute(levels);
       });

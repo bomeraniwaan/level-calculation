@@ -160,7 +160,7 @@
       </div>
     </section>
 
-    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.3 – 初期値空欄版</div>
+    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.4 – レベル選択で②に反映版</div>
   </div>
 
   <script>
@@ -279,7 +279,6 @@
 
     function compute(levels) {
       clearWarning();
-      // 空欄は0として扱う
       const perHour = $('#perHourXp').value === '' ? 0 : Number($('#perHourXp').value);
       const targetM = $('#targetXpM').value === '' ? 0 : Number($('#targetXpM').value);
       const currentM = $('#currentXpM').value === '' ? 0 : Number($('#currentXpM').value);
@@ -310,7 +309,6 @@
 
     function encodeStateToHash() {
       const state = {
-        // 空欄は保存しない（undefinedになるので短くなる）
         perHourXp: $('#perHourXp').value === '' ? undefined : Number($('#perHourXp').value),
         targetXpM: $('#targetXpM').value === '' ? undefined : Number($('#targetXpM').value),
         currentXpM: $('#currentXpM').value === '' ? undefined : Number($('#currentXpM').value),
@@ -343,7 +341,6 @@
       const levels = await fetchLevelsFromSheet();
       renderLevelsToSelect(levels);
 
-      // ハッシュに値があるときだけ復元
       const st = decodeStateFromHash();
       if (st) {
         if (typeof st.perHourXp === 'number') $('#perHourXp').value = st.perHourXp;
@@ -352,13 +349,24 @@
         if (st.selectedLevel) $('#levelSelect').value = st.selectedLevel;
       }
 
-      // 初期表示は計算しないで「—」のままでもいいが、シート読み込み後に一度走らせておく
-      compute(levels);
-
-      ['#perHourXp','#targetXpM','#currentXpM','#levelSelect'].forEach(sel => {
+      // 入力のイベント
+      ['#perHourXp','#targetXpM','#currentXpM'].forEach(sel => {
         $(sel).addEventListener('input', () => compute(levels));
       });
 
+      // ★ここが今回のポイント：レベルを選んだら②に反映してから計算する
+      $('#levelSelect').addEventListener('change', () => {
+        const val = $('#levelSelect').value;
+        if (val) {
+          const lv = levels.find(l => String(l.level) === String(val));
+          if (lv) {
+            $('#targetXpM').value = lv.xpM; // ← これで②が更新される
+          }
+        }
+        compute(levels);
+      });
+
+      // 共有
       $('#genLink').addEventListener('click', () => {
         const hash = encodeStateToHash();
         const url = location.origin + location.pathname + hash;
@@ -380,6 +388,9 @@
           alert('クリップボードにコピーできませんでした');
         }
       });
+
+      // 初回表示
+      compute(levels);
     }
 
     init();

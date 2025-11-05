@@ -95,7 +95,7 @@
     <h1>レベル到達時間計算</h1>
     <div class="sub">
       ②と③はM表記（百万単位）で入力します。内部で×1,000,000して計算します。<br>
-      レベルリストは下記のGoogleスプレッドシートから取得します。
+      レベルリストはGoogleスプレッドシートから取得します。
     </div>
 
     <section class="card">
@@ -103,15 +103,15 @@
       <div class="row">
         <div>
           <label>① 1時間に溜まる経験値（/h）<span class="small">（Mではありません）</span></label>
-          <input id="perHourXp" type="number" min="0" value="0" placeholder="例：2500000">
+          <input id="perHourXp" type="number" min="0" placeholder="例：2500000">
         </div>
         <div>
           <label>② レベル到達経験値（M）</label>
-          <input id="targetXpM" type="number" min="0" value="0" placeholder="例：24">
+          <input id="targetXpM" type="number" min="0" placeholder="例：24">
         </div>
         <div>
           <label>③ 現在の経験値（M）</label>
-          <input id="currentXpM" type="number" min="0" value="0" placeholder="例：14">
+          <input id="currentXpM" type="number" min="0" placeholder="例：14">
         </div>
       </div>
 
@@ -152,7 +152,7 @@
 
     <section class="card">
       <h2>共有</h2>
-      <p class="small">入力値だけをURLに埋め込んで共有します（レベル表はシートから毎回取得します）。</p>
+      <p class="small">入力値だけをURLに埋め込んで共有します（レベル表はシートから毎回取得）。</p>
       <div class="share-grid">
         <button id="genLink" type="button" class="btn">共有リンクを生成</button>
         <button id="copyLink" type="button" class="btn">コピー</button>
@@ -160,16 +160,14 @@
       </div>
     </section>
 
-    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3 – Google Sheets(gviz)読込版</div>
+    <div class="small" style="margin-top:10px; color:var(--muted);">v1.3.3 – 初期値空欄版</div>
   </div>
 
   <script>
-    // このシートIDで固定
     const SHEET_ID = '1Zla4Jkw_Rk86d8JJ360LLlDFmnfzoDRSUurxjEIDDrk';
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
     const M = 1_000_000;
     const TZ = 'Asia/Tokyo';
-
     const $ = (s) => document.querySelector(s);
 
     function formatDuration(hours) {
@@ -214,28 +212,44 @@
       return { hours, eta: formatEta(hours) };
     }
 
+    function toNumberLoose(v) {
+      if (typeof v === 'number') return v;
+      if (v == null) return NaN;
+      const m = String(v).match(/\d+/);
+      return m ? Number(m[0]) : NaN;
+    }
+    function toFloatLoose(v) {
+      if (typeof v === 'number') return v;
+      if (v == null) return 0;
+      const s = String(v).replace(',', '.');
+      const n = Number(s);
+      return Number.isNaN(n) ? 0 : n;
+    }
+
     async function fetchLevelsFromSheet() {
       const loadMsg = $('#levelLoadMsg');
       try {
         const res = await fetch(GVIZ_URL);
         const text = await res.text();
-        // gviz形式 → {}の部分だけを抜いてJSON化
         const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
         const rows = json.table.rows;
         const levels = [];
-        // 1行目はヘッダ想定なので飛ばす
-        for (let i = 1; i < rows.length; i++) {
-          const r = rows[i];
-          // A列: level, B列: xpM
-          const levelCell = r.c[0];
-          const xpMCell = r.c[1];
-          if (!levelCell) continue;
-          const level = Number(levelCell.v);
-          const xpM = xpMCell ? Number(xpMCell.v) : 0;
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row.c) continue;
+          const levelCell = row.c[0];
+          const xpMCell   = row.c[1];
+          const levelRaw = levelCell ? (levelCell.v ?? levelCell.f ?? '') : '';
+          if (!levelRaw) continue;
+          if (String(levelRaw).toLowerCase().includes('level')) continue;
+          const level = toNumberLoose(levelRaw);
+          if (Number.isNaN(level)) continue;
+          const xpM = xpMCell ? toFloatLoose(xpMCell.v ?? xpMCell.f ?? '') : 0;
           levels.push({ level, xpM });
         }
+        levels.sort((a,b)=>a.level - b.level);
         loadMsg.textContent = `シートから ${levels.length} 件読み込みました`;
-        return levels.sort((a,b)=>a.level - b.level);
+        return levels;
       } catch (e) {
         console.warn('level fetch error', e);
         loadMsg.textContent = 'シートの読み込みに失敗しました。手動入力でご利用ください。';
@@ -246,12 +260,12 @@
     function renderLevelsToSelect(levels) {
       const sel = $('#levelSelect');
       sel.innerHTML = '<option value="">— レベル未選択 —</option>';
-      levels.forEach(l => {
+      for (const l of levels) {
         const opt = document.createElement('option');
         opt.value = String(l.level);
         opt.textContent = `Lv.${l.level}（${l.xpM}M）`;
         sel.appendChild(opt);
-      });
+      }
     }
 
     function warning(msg) {
@@ -265,22 +279,17 @@
 
     function compute(levels) {
       clearWarning();
-      const perHour = Number($('#perHourXp').value) || 0;
-      const targetM = Number($('#targetXpM').value) || 0;
-      const currentM = Number($('#currentXpM').value) || 0;
+      // 空欄は0として扱う
+      const perHour = $('#perHourXp').value === '' ? 0 : Number($('#perHourXp').value);
+      const targetM = $('#targetXpM').value === '' ? 0 : Number($('#targetXpM').value);
+      const currentM = $('#currentXpM').value === '' ? 0 : Number($('#currentXpM').value);
       const selLevelVal = $('#levelSelect').value ? Number($('#levelSelect').value) : null;
 
-      if (perHour < 0 || targetM < 0 || currentM < 0) {
-        warning('0以上の数値を入力してください。');
-      }
-
-      // 選択中の行
       const res = calcTime(perHour, targetM, currentM);
       $('#rowSelLabel').textContent = selLevelVal ? `Lv.${selLevelVal}` : '手動入力';
       $('#rowSelTime').textContent = formatDuration(res.hours);
       $('#rowSelEta').textContent = res.eta;
 
-      // 次レベル
       const nextRow = $('#rowNextLevel');
       if (selLevelVal && levels.length) {
         const idx = levels.findIndex(l => l.level === selLevelVal);
@@ -301,11 +310,11 @@
 
     function encodeStateToHash() {
       const state = {
-        perHourXp: Number($('#perHourXp').value) || 0,
-        targetXpM: Number($('#targetXpM').value) || 0,
-        currentXpM: Number($('#currentXpM').value) || 0,
+        // 空欄は保存しない（undefinedになるので短くなる）
+        perHourXp: $('#perHourXp').value === '' ? undefined : Number($('#perHourXp').value),
+        targetXpM: $('#targetXpM').value === '' ? undefined : Number($('#targetXpM').value),
+        currentXpM: $('#currentXpM').value === '' ? undefined : Number($('#currentXpM').value),
         selectedLevel: $('#levelSelect').value || ''
-        // levels はシートから毎回取るのでURLに含めない
       };
       const json = JSON.stringify(state);
       const bytes = new TextEncoder().encode(json);
@@ -331,25 +340,21 @@
     }
 
     async function init() {
-      // 1. シートからレベルを取得
       const levels = await fetchLevelsFromSheet();
       renderLevelsToSelect(levels);
 
-      // 2. URLハッシュから入力値を復元
+      // ハッシュに値があるときだけ復元
       const st = decodeStateFromHash();
       if (st) {
-        $('#perHourXp').value = st.perHourXp ?? 0;
-        $('#targetXpM').value = st.targetXpM ?? 0;
-        $('#currentXpM').value = st.currentXpM ?? 0;
-        if (st.selectedLevel) {
-          $('#levelSelect').value = st.selectedLevel;
-        }
+        if (typeof st.perHourXp === 'number') $('#perHourXp').value = st.perHourXp;
+        if (typeof st.targetXpM === 'number') $('#targetXpM').value = st.targetXpM;
+        if (typeof st.currentXpM === 'number') $('#currentXpM').value = st.currentXpM;
+        if (st.selectedLevel) $('#levelSelect').value = st.selectedLevel;
       }
 
-      // 3. 初回計算
+      // 初期表示は計算しないで「—」のままでもいいが、シート読み込み後に一度走らせておく
       compute(levels);
 
-      // 4. イベント
       ['#perHourXp','#targetXpM','#currentXpM','#levelSelect'].forEach(sel => {
         $(sel).addEventListener('input', () => compute(levels));
       });
